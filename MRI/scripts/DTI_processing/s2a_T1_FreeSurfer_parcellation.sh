@@ -35,7 +35,7 @@ export MRTRIX_QUIET=1
 path_T1=../../data/DWI
 
 # Select the atlas to use
-ATLAS=('atlas55_RSN')
+ATLAS=('AAL')
 ordered=1
 
 now=$(date +"%T")

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Subjects' filename
-filename='./subjects_txt_files/missing_subjects.txt'
+filename='./subjects_txt_files/all_subjects.txt'
 
 # Select the processes to run
-export reconall_flag=0
+export reconall_flag=1
 export asegstats_flag=1
 export parc2seg_flag=1
 

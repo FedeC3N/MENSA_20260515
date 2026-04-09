@@ -15,9 +15,9 @@ path_dwi='"../../data/DWI"'
 path_out='"../../data/sc"'
 
 # Parameters
-declare -a SEEDS=('"1M"')
+declare -a SEEDS=('"25M"')
 declare -a MEASURES=('"adc"' '"fa"' '"ad"' '"rd"' '"cl"' '"cp"' '"cs"') 
-declare -a STATS=('"mean"' '"median"' '"min"' '"max"' ) 
+declare -a STATS=('"median"') 
 declare -a ATLAS=('"AAL"')
 overwrite=true
 subject="\"$subject\""

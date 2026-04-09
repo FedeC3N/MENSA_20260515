@@ -20,9 +20,9 @@ module load FSL/5.0.11-foss-2018b
 FSLOUTPUTTYPE=NIFTI
 
 # Parameters
-SEEDS=1M # (1M 5M 10M 15M 20M 25M 30M)
+SEEDS=25M # (1M 5M 10M 15M 20M 25M 30M)
 TENSOR_MEASURES=('adc' 'fa' 'ad' 'rd' 'cl' 'cp' 'cs') # ('adc' 'fa' 'ad' 'rd' 'cl' 'cp' 'cs')
-STREAMLINES_STATS=('mean' 'median' 'min' 'max') # mean, median, min, max.
+STREAMLINES_STATS=('median') # mean, median, min, max.
 ATLAS=('AAL')
 
 

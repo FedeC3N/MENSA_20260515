@@ -24,7 +24,7 @@ shopt -s extglob
 filename='./subjects_txt_files/all_subjects.txt'
 
 # Select the atlas to use
-ATLAS=('atlas55_RSN')
+ATLAS=('AAL')
 
 path_dwi=../../data/DWI
 path_scripts=$(pwd)
