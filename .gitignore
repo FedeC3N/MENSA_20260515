@@ -7,6 +7,9 @@ data/
 # Ignore Pycharm
 .idea/
 
+# Ignore Freesurfer
+FreeSurfer/
+
 # --- Python ---
 __pycache__/
 *.py[cod]
@@ -40,5 +43,7 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# --- Excels ---
+# --- Files to ignore ---
 *.xlsx
+*.mat
+*.nii*
