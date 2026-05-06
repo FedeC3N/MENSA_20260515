@@ -1,0 +1,2 @@
+Start at 14:47:49
+HIQ_072 fails downloading 100k tck

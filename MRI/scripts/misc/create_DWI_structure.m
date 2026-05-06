@@ -19,7 +19,7 @@ restoredefaultpath
 % =========================
 %  RUTA DE LA CARPETA RAÍZ
 %  =========================
-root_dir = fullfile('C:','Users','Human','Desktop','IZB','Proyectos','HIQ','Estudios','MENSA_20260515','MRI','data');
+root_dir = fullfile('C:','Users','Human','Desktop','IZB','Proyectos','HIQ','Estudios','MENSA_20260515','MRI','data','DWI');
 
 % =========================
 %  ARCHIVOS A COPIAR
@@ -43,14 +43,14 @@ end
 % % =========================
 %  BUSCAR ARCHIVOS NIFTI
 %  =========================
-all_files = dir(fullfile(root_dir, '*.nii.gz'));
+all_files = dir(fullfile(root_dir, '*.nii'));
 all_names = {all_files.name};
 
 % Expresión regular:
 % captura HIQ_XXX al inicio del nombre, por ejemplo:
 % HIQ_024_0_DWI.nii.gz
 % HIQ_024_0_T1.nii.gz
-expr = '^(HIQ_[0-9]{3})_.*\.nii\.gz$';
+expr = '^(HIQ_[0-9]{3})_.*\.nii$';
 
 subject_ids = {};
 
