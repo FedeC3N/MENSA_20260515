@@ -47,3 +47,5 @@ Thumbs.db
 *.xlsx
 *.mat
 *.nii*
+*.png
+*.ICG
