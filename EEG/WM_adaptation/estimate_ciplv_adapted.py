@@ -1,0 +1,208 @@
+# -*- coding: utf-8 -*-
+"""
+Estimate ciplv for sensors or sources
+
+Federico Ramírez-Toraño
+24/02/2026
+"""
+
+# Imports
+import mne
+import numpy
+import os
+import re
+
+from sEEGnal.tools.mne_tools import prepare_eeg
+from sEEGnal.tools.bids_tools import read_inverse_solution, write_ciplv
+from sEEGnal.tools.fc_tools import compute_ciplv
+
+from WM_adaptation.filter_epochs_by_load import add_2wm_metadata_to_epochs
+
+
+def estimate_ciplv(config, BIDS):
+
+    # Load cleaned EEG
+    print(f'      Measure: ciplv')
+
+    sobi = {
+        'desc': 'sobi',
+        'components_to_include': ['brain', 'other'],
+        'components_to_exclude': []
+    }
+
+    freq_limits_components = [
+        config['component_estimation']['low_freq'],
+        config['component_estimation']['high_freq']
+    ]
+
+    freq_limits_signal = [
+        config['feature_extraction']['ciplv']['freq_limits'][0],
+        config['feature_extraction']['ciplv']['freq_limits'][-1]
+    ]
+
+    raw = prepare_eeg(
+        config,
+        BIDS,
+        preload=True,
+        channels_to_include=config['global']["channels_to_include"],
+        channels_to_exclude=config['global']["channels_to_exclude"],
+        freq_limits=freq_limits_components,
+        notch_filter=True,
+        resample_frequency=config['component_estimation']['resample_frequency'],
+        set_annotations=True,
+        crop_seconds=config['component_estimation']['crop_seconds'],
+        rereference='average'
+    )
+
+    raw_clean = prepare_eeg(
+        config,
+        BIDS,
+        raw=raw,
+        apply_sobi=sobi,
+        freq_limits=freq_limits_signal,
+        metadata_badchannels=True
+    )
+
+    epochs = prepare_eeg(
+        config,
+        BIDS,
+        raw=raw_clean,
+        epoch_definition=config['feature_extraction']['ciplv']['epoch_definition']
+    )
+
+    # Extract the info
+    pattern = "sub-([0-9]{3})*"
+    sub = re.findall(pattern, BIDS.basename)[0]
+    math_path = os.path.join(config['path']['data_root'], 'sourcedata', 'beh',
+                             f"HIQ_{sub}_0_ColorK_MATLAB.mat")
+
+    epochs = add_2wm_metadata_to_epochs(
+        epochs=epochs,
+        mat_path=math_path,
+        raw=raw_clean,
+        event_code=32
+    )
+
+    metadata = None
+    target_loads = config.get("loads", [8])
+
+    for target_set_size in target_loads:
+
+        raw = epochs[f"set_size == {target_set_size}"]
+
+        if len(raw.events) == 0:
+            print(f"          Skipping load {target_set_size}: no epochs.")
+            continue
+
+        # SENSOR LEVEL
+        if 'sensor' in config['feature_extraction']['ciplv']:
+
+            print(f'          Sensors. Load {target_set_size}.')
+
+            params = config['feature_extraction']['ciplv']['sensor']
+
+            # Save memory
+            nepochs, nchannels, nsamples = raw.get_data().shape
+
+            for iband, current_band in enumerate(params['freq_bands_name']):
+
+                # Filter the data
+                banddata = raw.copy().load_data()
+                banddata.filter(
+                    params['freq_bands_limits'][iband][0],
+                    params['freq_bands_limits'][iband][1]
+                )
+
+                # ciplv
+                band_ciplv_vector = compute_ciplv(
+                    data=banddata.get_data(),
+                    average_epochs=True
+                )
+
+                # Save the metadata
+                metadata = {
+                    "method": "ciplv",
+                    "n_nodes": nchannels,
+                    "ch_names": raw.ch_names,
+                    "n_epochs_used": nepochs,
+                    "band_name": current_band,
+                    "description": "Upper triangluar of ciPLV matrix of [n_nodes, n_nodes] obatined by numpy.triu_indices(nsources, k=1)"
+                }
+
+                old_task = BIDS.task
+                BIDS.task = f"{BIDS.task}load{target_set_size}"
+
+                # Save the result
+                config['current_space'] = 'sensor'
+                write_ciplv(
+                    config,
+                    BIDS,
+                    ciplv=band_ciplv_vector,
+                    metadata=metadata
+                )
+                BIDS.task = old_task
+                del config['current_space']
+
+        # SOURCE LEVEL
+        if 'source' in config['feature_extraction']['ciplv']:
+
+            print(f'          Sources. Load {target_set_size}.')
+
+            params = config['feature_extraction']['ciplv']['source']
+
+            dummy = config['subsystem']
+            config['subsystem'] = 'source_reconstruction'
+            filters = read_inverse_solution(config, BIDS)
+            config['subsystem'] = dummy
+
+            # Apply LCMV per epoch
+            stcs = mne.beamformer.apply_lcmv_epochs(raw, filters)
+
+            # Save memory
+            nsources, nsamples = stcs[0].shape
+
+            for iband, current_band in enumerate(params['freq_bands_name']):
+
+                # Filter the data
+                filtered_stcs = []
+                for stc in stcs:
+                    stc_copy = stc.copy()
+                    stc_copy.filter(
+                        params['freq_bands_limits'][iband][0],
+                        params['freq_bands_limits'][iband][1]
+                    )
+                    filtered_stcs.append(stc_copy)
+
+                banddata = numpy.stack([stc.data for stc in filtered_stcs])
+
+                # ciplv
+                band_ciplv_vector = compute_ciplv(
+                    data=banddata,
+                    average_epochs=True
+                )
+
+                # Save the metadata
+                metadata = {
+                    "method": "ciplv",
+                    "n_nodes": nsources,
+                    "ch_names": '',
+                    "n_epochs_used": len(stcs),
+                    "band_name": current_band,
+                    "description": "Upper triangluar of ciPLV matrix of [n_nodes, n_nodes] obatined by numpy.triu_indices(nsources, k=1)"
+                }
+
+                old_task = BIDS.task
+                BIDS.task = f"{BIDS.task}load{target_set_size}"
+
+                # Save the result
+                config['current_space'] = 'source'
+                write_ciplv(
+                    config,
+                    BIDS,
+                    ciplv=band_ciplv_vector,
+                    metadata=metadata
+                )
+                del config['current_space']
+                BIDS.task = old_task
+
+    return metadata
